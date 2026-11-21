@@ -1,0 +1,50 @@
+name: Build E-ShopBD Admin APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare Android Project
+        run: |
+          if [ -f "EShopBDAdmin.zip" ]; then
+            echo "Extracting EShopBDAdmin.zip..."
+            unzip -o EShopBDAdmin.zip -d app_project
+          elif [ -f "make_eshop_app_zip.py" ]; then
+            echo "Generating EShopBDAdmin.zip from Python script..."
+            python3 make_eshop_app_zip.py
+            unzip -o EShopBDAdmin.zip -d app_project
+          else
+            echo "ERROR: Repo root-এ EShopBDAdmin.zip অথবা make_eshop_app_zip.py ফাইল নেই!"
+            exit 1
+          fi
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Build Debug APK
+        working-directory: app_project
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EShopBD-Admin-APK
+          path: app_project/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
